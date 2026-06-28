@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Barbell Tracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, 'Inter', system-ui, sans-serif; background: #0f0f13; color: #e8e8f0; min-height: 100vh; }
+  button { font-family: inherit; cursor: pointer; }
+
+  #setup-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 32px 24px; text-align: center; }
+  #setup-screen h1 { font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+  #setup-screen p { font-size: 13px; color: #6b6b80; margin-bottom: 24px; line-height: 1.6; }
+  #setup-screen input { width: 100%; padding: 12px 14px; background: #14141c; border: 1px solid #2a2a38; border-radius: 10px; color: #e8e8f0; font-size: 13px; margin-bottom: 12px; }
+  #setup-screen input::placeholder { color: #4a4a60; }
+  .btn-primary { width: 100%; padding: 14px; background: #3b82f6; border: none; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 700; }
+  .setup-steps { text-align: left; background: #14141c; border: 1px solid #1e1e2a; border-radius: 10px; padding: 16px; margin-bottom: 24px; width: 100%; }
+  .setup-steps h3 { font-size: 12px; font-weight: 700; color: #3b82f6; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .setup-steps ol { padding-left: 16px; }
+  .setup-steps li { font-size: 12px; color: #9090a0; line-height: 1.8; }
+  .setup-steps code { background: #1e1e2a; padding: 1px 5px; border-radius: 4px; color: #e8e8f0; font-size: 11px; }
+
+  #app { display: none; }
+  .header { border-bottom: 1px solid #1e1e2a; padding: 16px 16px 0; position: sticky; top: 0; background: #0f0f13; z-index: 10; }
+  .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .header-top h1 { font-size: 18px; font-weight: 700; color: #fff; }
+  .week-ctrl { display: flex; align-items: center; gap: 6px; }
+  .week-ctrl span { font-size: 11px; color: #5a5a70; }
+  .week-btn { background: #1e1e2a; border: none; color: #9090a0; border-radius: 6px; width: 26px; height: 26px; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+  .week-num { font-size: 14px; font-weight: 700; color: #e8e8f0; min-width: 18px; text-align: center; }
+  .tab-nav { display: flex; }
+  .tab-btn { background: none; border: none; border-bottom: 2px solid transparent; color: #6b6b80; font-size: 13px; font-weight: 400; padding: 8px 14px; }
+  .tab-btn.active { border-bottom-color: #3b82f6; color: #e8e8f0; font-weight: 600; }
+
+  .content { padding: 20px 16px; max-width: 560px; margin: 0 auto; }
+
+  .day-selector { display: flex; gap: 8px; margin-bottom: 18px; }
+  .day-btn { flex: 1; padding: 10px 4px; background: #16161e; border: 1px solid #1e1e2a; border-radius: 10px; text-align: center; }
+  .day-btn.active-a { background: #3b82f620; border-color: #3b82f6; }
+  .day-btn.active-b { background: #8b5cf620; border-color: #8b5cf6; }
+  .day-btn.active-c { background: #10b98120; border-color: #10b981; }
+  .day-label { font-size: 13px; font-weight: 700; margin-bottom: 2px; }
+  .day-tag { font-size: 10px; color: #5a5a70; }
+  .color-a { color: #3b82f6; } .color-b { color: #8b5cf6; } .color-c { color: #10b981; }
+
+  .ex-card { background: #14141c; border: 1px solid #1e1e2a; border-radius: 12px; padding: 14px; margin-bottom: 10px; transition: background 0.2s, border-color 0.2s; }
+  .ex-card.done { background: #12201a; border-color: #10b98133; }
+  .ex-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .ex-name { font-size: 14px; font-weight: 600; color: #e8e8f0; margin-bottom: 2px; }
+  .ex-name.done { color: #6ee7b7; }
+  .ex-meta { font-size: 11px; color: #5a5a70; }
+  .weight-ctrl { display: flex; align-items: center; gap: 5px; background: #1a1a24; border: 1px solid #2a2a38; border-radius: 8px; padding: 4px 8px; }
+  .weight-adj { background: none; border: none; color: #6b6b80; font-size: 18px; line-height: 1; padding: 0 2px; }
+  .weight-val { font-size: 13px; font-weight: 700; min-width: 48px; text-align: center; }
+  .sets-row { display: flex; gap: 7px; margin-bottom: 10px; align-items: center; flex-wrap: wrap; }
+  .set-btn { width: 34px; height: 34px; border-radius: 7px; border: 1px solid #2a2a38; background: #1a1a24; color: #5a5a70; font-size: 12px; font-weight: 700; }
+  .set-btn.checked-a { border-color: #3b82f6; background: #3b82f630; color: #3b82f6; }
+  .set-btn.checked-b { border-color: #8b5cf6; background: #8b5cf630; color: #8b5cf6; }
+  .set-btn.checked-c { border-color: #10b981; background: #10b98130; color: #10b981; }
+  .done-badge { font-size: 11px; background: #10b98120; color: #10b981; padding: 3px 8px; border-radius: 20px; font-weight: 600; }
+  .ex-cue { font-size: 11px; color: #5a5a68; border-top: 1px solid #1e1e2a; padding-top: 9px; font-style: italic; }
+
+  .log-btn { width: 100%; padding: 14px; border: none; border-radius: 10px; color: #fff; font-size: 14px; font-weight: 700; margin-top: 8px; }
+  .log-btn-a { background: #3b82f6; } .log-btn-b { background: #8b5cf6; } .log-btn-c { background: #10b981; }
+
+  .section-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .section-sub { font-size: 12px; color: #6b6b80; margin-bottom: 18px; }
+
+  .weight-card { background: #14141c; border: 1px solid #1e1e2a; border-radius: 10px; padding: 13px 14px; margin-bottom: 8px; }
+  .weight-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 5px; }
+  .weight-card-name { font-size: 13px; font-weight: 600; color: #e8e8f0; }
+  .weight-card-nums { display: flex; gap: 8px; align-items: center; }
+  .w-start { font-size: 11px; color: #5a5a70; }
+  .w-current { font-size: 14px; font-weight: 700; color: #3b82f6; }
+  .w-gain { font-size: 11px; font-weight: 600; color: #10b981; }
+  .weight-card-note { font-size: 11px; color: #5a5a68; font-style: italic; margin-bottom: 5px; }
+  .weight-card-inc { font-size: 11px; color: #4a4a60; }
+
+  .info-box { border-radius: 10px; padding: 14px; margin-top: 14px; }
+  .info-box-blue { background: #111820; border: 1px solid #1a2a38; }
+  .info-box-amber { background: #1a1410; border: 1px solid #3b2d1a; }
+  .info-box-title { font-size: 12px; font-weight: 700; margin-bottom: 6px; }
+  .info-box-blue .info-box-title { color: #3b82f6; }
+  .info-box-amber .info-box-title { color: #f59e0b; }
+  .info-box ul { padding-left: 14px; }
+  .info-box li { font-size: 12px; color: #6b6b80; line-height: 1.9; }
+
+  .log-empty { text-align: center; padding: 48px 24px; color: #3a3a50; }
+  .log-empty-icon { font-size: 32px; margin-bottom: 12px; }
+  .log-empty-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .log-empty-sub { font-size: 12px; }
+
+  .log-ex-card { background: #14141c; border: 1px solid #1e1e2a; border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+  .log-ex-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .log-ex-name { font-size: 13px; font-weight: 600; color: #e8e8f0; }
+  .log-gain { font-size: 11px; font-weight: 600; color: #10b981; }
+  .log-entries { display: flex; gap: 6px; flex-wrap: wrap; }
+  .log-entry { background: #1a1a24; border: 1px solid #2a2a38; border-radius: 6px; padding: 5px 8px; font-size: 11px; text-align: center; min-width: 54px; }
+  .log-entry.complete { background: #10b98118; border-color: #10b98140; }
+  .log-entry-week { color: #5a5a70; margin-bottom: 2px; }
+  .log-entry-weight { font-weight: 700; }
+  .log-entry.complete .log-entry-weight { color: #6ee7b7; }
+  .log-entry-status { font-size: 9px; margin-top: 2px; }
+  .log-entry.complete .log-entry-status { color: #10b981; }
+  .log-entry:not(.complete) .log-entry-status { color: #4a4a60; }
+
+  .toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: #10b981; color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; z-index: 999; box-shadow: 0 4px 20px #0008; white-space: nowrap; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+  .toast.visible { opacity: 1; }
+  .toast.error { background: #ef4444; }
+
+  .sync-indicator { font-size: 10px; color: #5a5a70; padding: 2px 0 12px; text-align: center; }
+
+  .loading-overlay { position: fixed; inset: 0; background: #0f0f13; display: flex; align-items: center; justify-content: center; z-index: 100; flex-direction: column; gap: 12px; }
+  .loading-overlay p { font-size: 13px; color: #6b6b80; }
+  .spinner { width: 28px; height: 28px; border: 2px solid #1e1e2a; border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- Setup Screen -->
+<div id="setup-screen">
+  <h1>Barbell Tracker</h1>
+  <p>Paste your Google Apps Script Web App URL below to connect your Google Sheet.</p>
+
+  <div class="setup-steps">
+    <h3>One-time setup</h3>
+    <ol>
+      <li>Open your Google Sheet → <strong>Extensions → Apps Script</strong></li>
+      <li>Delete any existing code, paste in <code>Code.gs</code></li>
+      <li>Click <strong>Deploy → New deployment</strong></li>
+      <li>Type: <em>Web app</em> · Execute as: <em>Me</em> · Access: <em>Anyone</em></li>
+      <li>Click Deploy, authorize, copy the Web App URL</li>
+      <li>Paste it below</li>
+    </ol>
+  </div>
+
+  <input type="url" id="script-url-input" placeholder="https://script.google.com/macros/s/..." />
+  <button class="btn-primary" onclick="saveScriptUrl()">Connect & Start</button>
+</div>
+
+<!-- Loading -->
+<div class="loading-overlay" id="loading" style="display:none">
+  <div class="spinner"></div>
+  <p>Syncing with Google Sheets…</p>
+</div>
+
+<!-- Main App -->
+<div id="app">
+  <div class="toast" id="toast"></div>
+
+  <div class="header">
+    <div class="header-top">
+      <h1>Barbell Tracker</h1>
+      <div class="week-ctrl">
+        <span>Week</span>
+        <button class="week-btn" onclick="changeWeek(-1)">‹</button>
+        <span class="week-num" id="week-display">1</span>
+        <button class="week-btn" onclick="changeWeek(1)">›</button>
+      </div>
+    </div>
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="switchTab('workout')">Workout</button>
+      <button class="tab-btn" onclick="switchTab('weights')">Weights</button>
+      <button class="tab-btn" onclick="switchTab('log')">Log</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div id="tab-workout"></div>
+    <div id="tab-weights" style="display:none"></div>
+    <div id="tab-log" style="display:none"></div>
+  </div>
+</div>
+
+<script>
+// ── State ────────────────────────────────────────────────────
+let SCRIPT_URL = "";
+let currentWeek = 1;
+let activeDay = 0;
+let checkedSets = {};
+let sessionWeights = {};
+let sessionLog = {};
+let activeTab = "workout";
+
+const STARTING_WEIGHTS = {
+  "Barbell Back Squat": 95, "Barbell Bench Press": 95, "Barbell Bent-Over Row": 75,
+  "Romanian Deadlift": 85, "Barbell Standing OHP": 55, "Conventional Deadlift": 115,
+  "Barbell Overhead Press": 55, "Barbell Pendlay Row": 75, "Good Morning": 45, "Barbell Floor Press": 75,
+};
+const WEIGHT_NOTES = {
+  "Barbell Back Squat": "Empty bar feels light — intentional. Re-groove the pattern first.",
+  "Barbell Bench Press": "Setup matters more than weight. Scapula packed, arch natural.",
+  "Barbell Bent-Over Row": "Lighter to protect the lower back while the hinge is relearned.",
+  "Romanian Deadlift": "Accessory lift — feel the stretch, don't ego lift.",
+  "Barbell Standing OHP": "OHP humbles everyone. 55 lb is a real starting point.",
+  "Conventional Deadlift": "115 lb lets you nail the setup before loading up.",
+  "Barbell Overhead Press": "Build the pattern consistently across both days.",
+  "Barbell Pendlay Row": "Dead stop each rep. Strict form = lighter starting weight.",
+  "Good Morning": "Stay at 45 lb until your hinge is solid. Add 10 lb/week.",
+  "Barbell Floor Press": "Tricep finisher — controlled lockout, not heavy.",
+};
+const LOWER_LIFTS = ["Barbell Back Squat","Conventional Deadlift","Romanian Deadlift","Good Morning"];
+const DAYS = [
+  { label:"Day A", tag:"Squat Focus", color:"#3b82f6", cls:"a",
+    exercises:[
+      {name:"Barbell Back Squat",sets:3,reps:"5",rest:"3 min",cue:"Drive knees out, chest up, full depth"},
+      {name:"Barbell Bench Press",sets:3,reps:"5",rest:"3 min",cue:"Retract scapula, bar to lower chest, drive feet into floor"},
+      {name:"Barbell Bent-Over Row",sets:3,reps:"5",rest:"3 min",cue:"Hinge to ~45°, pull to lower ribs, squeeze lats"},
+      {name:"Romanian Deadlift",sets:3,reps:"8–10",rest:"2 min",cue:"Push hips back, soft knee bend, feel hamstring stretch"},
+      {name:"Barbell Standing OHP",sets:2,reps:"8",rest:"2 min",cue:"Brace core hard, bar in front of face on way down"},
+    ]},
+  { label:"Day B", tag:"Hinge Focus", color:"#8b5cf6", cls:"b",
+    exercises:[
+      {name:"Conventional Deadlift",sets:3,reps:"5",rest:"3–4 min",cue:"Bar over mid-foot, lats tight, push floor away"},
+      {name:"Barbell Overhead Press",sets:3,reps:"5",rest:"3 min",cue:"Full lockout at top, don't lean back excessively"},
+      {name:"Barbell Back Squat",sets:3,reps:"8",rest:"2 min",cue:"Lighter than Day A — focus on tempo (3s down)"},
+      {name:"Barbell Pendlay Row",sets:3,reps:"6",rest:"2 min",cue:"Dead stop each rep from floor, explosive pull"},
+      {name:"Good Morning",sets:2,reps:"10",rest:"90 sec",cue:"Light weight, feel glute/hamstring tension at bottom"},
+    ]},
+  { label:"Day C", tag:"Press Focus", color:"#10b981", cls:"c",
+    exercises:[
+      {name:"Barbell Bench Press",sets:4,reps:"5",rest:"3 min",cue:"Heavier than Day A — this is your main press day"},
+      {name:"Barbell Back Squat",sets:3,reps:"5",rest:"3 min",cue:"Match or slightly exceed Day A weight"},
+      {name:"Barbell Bent-Over Row",sets:3,reps:"6–8",rest:"2 min",cue:"Pause at top, squeeze for 1 count"},
+      {name:"Romanian Deadlift",sets:3,reps:"10",rest:"90 sec",cue:"Go heavier than Day A — hip hinge is king"},
+      {name:"Barbell Floor Press",sets:2,reps:"8",rest:"90 sec",cue:"Tricep finisher — pause lightly at floor each rep"},
+    ]},
+];
+const ALL_EXERCISES = [...new Set(DAYS.flatMap(d => d.exercises.map(e => e.name)))];
+
+// ── Setup ────────────────────────────────────────────────────
+function saveScriptUrl() {
+  const url = document.getElementById("script-url-input").value.trim();
+  if (!url.startsWith("https://script.google.com")) {
+    alert("Please paste a valid Apps Script Web App URL.");
+    return;
+  }
+  localStorage.setItem("bbScriptUrl", url);
+  SCRIPT_URL = url;
+  initApp();
+}
+
+function initApp() {
+  SCRIPT_URL = localStorage.getItem("bbScriptUrl") || "";
+  currentWeek = parseInt(localStorage.getItem("bbWeek") || "1");
+  activeDay = parseInt(localStorage.getItem("bbActiveDay") || "0");
+
+  if (!SCRIPT_URL) {
+    document.getElementById("setup-screen").style.display = "flex";
+    return;
+  }
+  document.getElementById("setup-screen").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  loadFromSheets();
+}
+
+// ── API ──────────────────────────────────────────────────────
+function showLoading(v) { document.getElementById("loading").style.display = v ? "flex" : "none"; }
+
+async function sheetsGet(action) {
+  const res = await fetch(`${SCRIPT_URL}?action=${action}`);
+  return res.json();
+}
+
+async function sheetsPost(body) {
+  const res = await fetch(SCRIPT_URL, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
+
+async function loadFromSheets() {
+  showLoading(true);
+  try {
+    const [wRes, lRes] = await Promise.all([sheetsGet("getWeights"), sheetsGet("getLog")]);
+    sessionWeights = { ...STARTING_WEIGHTS, ...(wRes.weights || {}) };
+    sessionLog = lRes.log || {};
+    checkedSets = {};
+  } catch(e) {
+    showToast("Could not reach Google Sheets. Working offline.", true);
+    sessionWeights = { ...STARTING_WEIGHTS };
+  }
+  showLoading(false);
+  renderAll();
+}
+
+// ── Toast ────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, isError = false) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast visible" + (isError ? " error" : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = "toast"; }, 3000);
+}
+
+// ── Week / Tab ───────────────────────────────────────────────
+function changeWeek(d) {
+  currentWeek = Math.max(1, Math.min(12, currentWeek + d));
+  localStorage.setItem("bbWeek", currentWeek);
+  document.getElementById("week-display").textContent = currentWeek;
+}
+
+function switchTab(tab) {
+  activeTab = tab;
+  ["workout","weights","log"].forEach(t => {
+    document.getElementById(`tab-${t}`).style.display = t === tab ? "block" : "none";
+    document.querySelectorAll(".tab-btn")[["workout","weights","log"].indexOf(t)].className =
+      "tab-btn" + (t === tab ? " active" : "");
+  });
+  if (tab === "weights") renderWeights();
+  if (tab === "log") renderLog();
+}
+
+// ── Render ───────────────────────────────────────────────────
+function renderAll() {
+  document.getElementById("week-display").textContent = currentWeek;
+  renderWorkout();
+  if (activeTab === "weights") renderWeights();
+  if (activeTab === "log") renderLog();
+}
+
+function renderWorkout() {
+  const day = DAYS[activeDay];
+  let html = `<div class="day-selector">`;
+  DAYS.forEach((d, i) => {
+    html += `<button class="day-btn ${i === activeDay ? `active-${d.cls}` : ''}" onclick="setDay(${i})">
+      <div class="day-label ${i === activeDay ? `color-${d.cls}` : ''}">${d.label}</div>
+      <div class="day-tag">${d.tag}</div>
+    </button>`;
+  });
+  html += `</div>`;
+
+  day.exercises.forEach((ex, exIdx) => {
+    const done = allSetsComplete(exIdx);
+    const w = sessionWeights[ex.name] || STARTING_WEIGHTS[ex.name];
+    const inc = LOWER_LIFTS.includes(ex.name) ? 5 : 2.5;
+    html += `<div class="ex-card ${done ? 'done' : ''}" id="excard-${exIdx}">
+      <div class="ex-top">
+        <div>
+          <div class="ex-name ${done ? 'done' : ''}">${ex.name}</div>
+          <div class="ex-meta">${ex.sets} sets × ${ex.reps} reps · rest ${ex.rest}</div>
+        </div>
+        <div class="weight-ctrl">
+          <button class="weight-adj" onclick="adjustWeight('${ex.name}', ${-inc})">−</button>
+          <span class="weight-val color-${day.cls}" id="wval-${exIdx}">${w} lb</span>
+          <button class="weight-adj" onclick="adjustWeight('${ex.name}', ${inc})">+</button>
+        </div>
+      </div>
+      <div class="sets-row" id="sets-${exIdx}">`;
+    for (let s = 0; s < ex.sets; s++) {
+      const chk = checkedSets[`${activeDay}-${exIdx}-${s}`];
+      html += `<button class="set-btn ${chk ? `checked-${day.cls}` : ''}" onclick="toggleSet(${exIdx},${s})">${chk ? '✓' : s+1}</button>`;
+    }
+    if (done) html += `<span class="done-badge">Done</span>`;
+    html += `</div>
+      <div class="ex-cue">💡 ${ex.cue}</div>
+    </div>`;
+  });
+
+  html += `<button class="log-btn log-btn-${day.cls}" onclick="logSession()">Log Session & Sync to Sheets</button>
+  <div class="sync-indicator" id="sync-status">Tap to save your session to Google Sheets</div>`;
+
+  document.getElementById("tab-workout").innerHTML = html;
+}
+
+function renderWeights() {
+  let html = `<div class="section-title">Starting Weights</div>
+  <div class="section-sub">Returning lifter · 240+ lb · auto-updates after each logged session</div>`;
+  ALL_EXERCISES.forEach(name => {
+    const sw = STARTING_WEIGHTS[name];
+    const cur = sessionWeights[name] || sw;
+    const gain = cur - sw;
+    const isLower = LOWER_LIFTS.includes(name);
+    html += `<div class="weight-card">
+      <div class="weight-card-top">
+        <div class="weight-card-name">${name}</div>
+        <div class="weight-card-nums">
+          <span class="w-start">start</span>
+          <span class="w-current">${sw} lb</span>
+          ${gain > 0 ? `<span class="w-gain">→ ${cur} lb</span>` : ''}
+        </div>
+      </div>
+      <div class="weight-card-note">${WEIGHT_NOTES[name]}</div>
+      <div class="weight-card-inc">+${isLower ? 5 : 2.5} lb/session · ${isLower ? 'lower' : 'upper'} body</div>
+    </div>`;
+  });
+  html += `<div class="info-box info-box-blue">
+    <div class="info-box-title">Why these numbers?</div>
+    <ul>
+      <li>Returning lifters have muscle memory but tendons need time to catch up</li>
+      <li>Starting light means fast progress for 4–6 weeks without early failure</li>
+      <li>At 240+ lb your leverages favor squat and deadlift — those climb fastest</li>
+    </ul>
+  </div>
+  <div class="info-box info-box-amber">
+    <div class="info-box-title">⚡ Warm-Up Protocol</div>
+    <ul>
+      <li>Empty bar × 8–10 reps</li>
+      <li>50% working weight × 5 reps</li>
+      <li>70% working weight × 3 reps</li>
+      <li>90% working weight × 1 rep → Work sets</li>
+    </ul>
+  </div>`;
+  document.getElementById("tab-weights").innerHTML = html;
+}
+
+function renderLog() {
+  const hasData = Object.keys(sessionLog).length > 0;
+  if (!hasData) {
+    document.getElementById("tab-log").innerHTML = `<div class="log-empty">
+      <div class="log-empty-icon">📋</div>
+      <div class="log-empty-title">No sessions logged yet</div>
+      <div class="log-empty-sub">Complete a workout and tap "Log Session" to see your progress here.</div>
+    </div>`;
+    return;
+  }
+  let html = `<div class="section-title">Session Log</div>
+  <div class="section-sub">Synced to Google Sheets after each session</div>`;
+  ALL_EXERCISES.filter(n => sessionLog[n] && sessionLog[n].length > 0).forEach(name => {
+    const entries = sessionLog[name];
+    const start = entries[0].weight;
+    const latest = entries[entries.length - 1].weight;
+    const gain = latest - start;
+    html += `<div class="log-ex-card">
+      <div class="log-ex-top">
+        <div class="log-ex-name">${name}</div>
+        ${gain > 0 ? `<div class="log-gain">+${gain} lb</div>` : ''}
+      </div>
+      <div class="log-entries">`;
+    entries.forEach(e => {
+      html += `<div class="log-entry ${e.completed ? 'complete' : ''}">
+        <div class="log-entry-week">Wk ${e.week}</div>
+        <div class="log-entry-weight">${e.weight} lb</div>
+        <div class="log-entry-status">${e.completed ? '✓ all sets' : 'partial'}</div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  document.getElementById("tab-log").innerHTML = html;
+}
+
+// ── Actions ──────────────────────────────────────────────────
+function setDay(i) {
+  activeDay = i;
+  localStorage.setItem("bbActiveDay", i);
+  checkedSets = {};
+  renderWorkout();
+}
+
+function toggleSet(exIdx, setIdx) {
+  const key = `${activeDay}-${exIdx}-${setIdx}`;
+  checkedSets[key] = !checkedSets[key];
+  renderWorkout();
+}
+
+function allSetsComplete(exIdx) {
+  const ex = DAYS[activeDay].exercises[exIdx];
+  return Array.from({length: ex.sets}, (_, i) => !!checkedSets[`${activeDay}-${exIdx}-${i}`]).every(Boolean);
+}
+
+function adjustWeight(name, delta) {
+  sessionWeights[name] = Math.max(45, (sessionWeights[name] || STARTING_WEIGHTS[name]) + delta);
+  renderWorkout();
+}
+
+async function logSession() {
+  const day = DAYS[activeDay];
+  const entries = [];
+  const newWeights = { ...sessionWeights };
+
+  day.exercises.forEach((ex, exIdx) => {
+    const completed = allSetsComplete(exIdx);
+    const w = sessionWeights[ex.name] || STARTING_WEIGHTS[ex.name];
+    entries.push({ week: currentWeek, day: day.label, exercise: ex.name, weight: w, sets: ex.sets, reps: ex.reps, completed });
+    if (!sessionLog[ex.name]) sessionLog[ex.name] = [];
+    sessionLog[ex.name].push({ week: currentWeek, weight: w, completed });
+    if (completed) {
+      const inc = LOWER_LIFTS.includes(ex.name) ? 5 : 2.5;
+      newWeights[ex.name] = w + inc;
+    }
+  });
+
+  sessionWeights = newWeights;
+  checkedSets = {};
+
+  document.getElementById("sync-status").textContent = "Syncing…";
+  try {
+    await Promise.all([
+      sheetsPost({ action: "logSession", entries }),
+      sheetsPost({ action: "saveWeights", weights: sessionWeights }),
+    ]);
+    showToast("Session saved to Google Sheets ✓");
+    document.getElementById("sync-status").textContent = "Synced to Google Sheets ✓";
+  } catch(e) {
+    showToast("Saved locally — sync failed", true);
+    document.getElementById("sync-status").textContent = "Sync failed — check connection";
+  }
+  renderWorkout();
+}
+
+// ── Boot ─────────────────────────────────────────────────────
+initApp();
+</script>
+</body>
+</html>
